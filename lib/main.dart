@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:rscom/usbport.dart';
 
 void main() {
   runApp(const MyApp());
@@ -32,15 +33,40 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  UsbPort port = UsbPort("acchhuUsbCom");
   @override
   Widget build(BuildContext context) {
-    var channel = MethodChannel("acchhuUsbCom");
     var retValue = "nothing to display".obs;
-    showToast() async {
-      String data = await channel.invokeMethod('showToast');
-      retValue.value = data;
-      print('$data');
+
+    listDevices() async {}
+
+    create() async {
+      String portStatus = await port.create();
+      print("Port Connection Status : $portStatus");
     }
+
+    showToast() async {
+      await port.showToast();
+    }
+
+    openPort() async {
+      bool portval = await port.open();
+      print("Port OPen status : $port");
+    }
+
+    setDTR() async {
+      port.setDTR(true);
+    }
+
+    setRTS() async {
+      await port.setRTS(true);
+    }
+
+    write() async {
+      await port.write(Uint8List.fromList([53, 0]));
+    }
+
+    connectPort() async {}
 
     return Scaffold(
       appBar: AppBar(
@@ -51,19 +77,16 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Obx(
-              () => Text(
-                "${retValue.value}",
-              ),
-            ),
+            ElevatedButton(
+                onPressed: () => showToast(), child: Text("Show Toast")),
+            ElevatedButton(onPressed: () => create(), child: Text("Port List")),
+            ElevatedButton(onPressed: () => setDTR(), child: Text("Set DTR")),
+            ElevatedButton(onPressed: () => setRTS(), child: Text("Set RTS")),
+            ElevatedButton(onPressed: () => openPort(), child: Text("Open")),
+            ElevatedButton(onPressed: () => write(), child: Text("Write")),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: showToast,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
