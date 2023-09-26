@@ -379,9 +379,12 @@ public class MainActivity extends FlutterActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
-        Toast.makeText(MainActivity.this, "On create method loaded successfully", Toast.LENGTH_LONG).show();
-
         super.onCreate(savedInstanceState);
+//        verifyConnection();
+
+    }
+
+    void verifyConnection(){
         usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
         if(usbManager != null){
             usbPermissionReceiver = new BroadcastReceiver() {
@@ -389,14 +392,17 @@ public class MainActivity extends FlutterActivity {
                     String action = intent.getAction();
                     if (ACTION_USB_PERMISSION.equals(action)) {
                         synchronized (this) {
-                            if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-                                // Permission granted, you can now open and communicate with the USB device.
-                                Toast.makeText(MainActivity.this, "Can access USB", Toast.LENGTH_LONG).show();
-//                            openUsbConnection();
-                            } else {
-                                // Permission denied.
-                                // Handle denial here.
-                                Toast.makeText(MainActivity.this, "USB Permission Denied!", Toast.LENGTH_LONG).show();
+                            if(!isUsbPermissionGranted()){
+                                if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                                    // Permission granted, you can now open and communicate with the USB device.
+                                    Toast.makeText(MainActivity.this, "Can access USB", Toast.LENGTH_LONG).show();
+
+                                } else {
+                                    // Permission denied.
+                                    // Handle denial here.
+                                    requestUsbPermission();
+                                    Toast.makeText(MainActivity.this, "USB Permission Denied!", Toast.LENGTH_LONG).show();
+                                }
                             }
                         }
                     }
@@ -412,12 +418,9 @@ public class MainActivity extends FlutterActivity {
 
 
         }
-
     }
 
     void getUsbPermission(){
-
-        Toast.makeText(MainActivity.this, "USB Permission Accessed", Toast.LENGTH_LONG).show();
         // Register the receiver for USB permission
         IntentFilter filter = new IntentFilter(ACTION_USB_PERMISSION);
         registerReceiver(usbPermissionReceiver, filter);
@@ -450,17 +453,13 @@ public class MainActivity extends FlutterActivity {
     private void openUsbConnection() {
         try {
             // Open the connection to the USB serial device
-            UsbDeviceConnection connection = usbManager.openDevice(usbSerialDriver.getDevice());
-            if (connection != null) {
-                // Connection opened successfully, perform USB operations here.
-                // For example, you can call sendDataOverUsb() here.
-                Toast.makeText(MainActivity.this, "Connection made successfully! " + connection, Toast.LENGTH_LONG).show();
+            usbConnection = usbManager.openDevice(usbSerialDriver.getDevice());
+            if (usbConnection != null) {
+                Toast.makeText(MainActivity.this, "Connection made successfully! " + usbConnection, Toast.LENGTH_LONG).show();
             } else {
-                // Connection not made.
                 Toast.makeText(MainActivity.this, "Connection not made!", Toast.LENGTH_LONG).show();
             }
         } catch (Exception e) {
-            // Handle exceptions here
             Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
             e.printStackTrace();
         }
@@ -494,23 +493,23 @@ public class MainActivity extends FlutterActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
-        // Check if USB permission is already granted
-        if (isUsbPermissionGranted()) {
-            // Permission is granted, continue with your USB operations
-            openUsbConnection();
-        } else {
-            // Permission is not granted, request it
-            requestUsbPermission();
-        }
+//
+//        // Check if USB permission is already granted
+//        if (isUsbPermissionGranted()) {
+//            openUsbConnection();
+//        } else {
+//            requestUsbPermission();
+//        }
     }
 
     private void requestUsbPermission() {
-        // Create a PendingIntent with FLAG_IMMUTABLE
-        PendingIntent permissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
+        if(!isUsbPermissionGranted()){
+            // Create a PendingIntent with FLAG_IMMUTABLE
+            PendingIntent permissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
 
-        // Request permission for the USB device
-        usbManager.requestPermission(usbDevice, permissionIntent);
+            // Request permission for the USB device
+            usbManager.requestPermission(usbDevice, permissionIntent);
+        }
     }
 
     private boolean isUsbPermissionGranted() {
@@ -645,6 +644,31 @@ public class MainActivity extends FlutterActivity {
         return portList.toString();
     }
 
+    void getPorts(){
+        usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+        if(usbManager != null){
+            usbPermissionReceiver = new BroadcastReceiver() {
+                public void onReceive(Context context, Intent intent) {
+                    String action = intent.getAction();
+                    if (ACTION_USB_PERMISSION.equals(action)) {
+                        synchronized (this) {
+                            if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                                Toast.makeText(MainActivity.this, "Can access USB", Toast.LENGTH_LONG).show();
+                            } else {
+                                requestUsbPermission();
+                            }
+                        }
+                    }
+                }
+            };
+
+            getUsbPermission();
+        }
+        else{
+            Toast.makeText(MainActivity.this, "Usb manager not initialized ", Toast.LENGTH_LONG).show();
+        }
+    }
+
     @Override
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
         super.configureFlutterEngine(flutterEngine);
@@ -652,12 +676,17 @@ public class MainActivity extends FlutterActivity {
         new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), CHANNEL_NAME).setMethodCallHandler(
                 (call, result) -> {
                     if (call.method.equals("showToast")) {
-//                        getPortsList();
+                        verifyConnection();
                         openUsbConnection();
                         listSerialPorts();
                         openUsbSerialPort();
 
                         result.success("No Device found"); // Indicate that the method call was successful
+                    }
+
+                    if(call.method.equals("getPorts")){
+                        getPorts();
+                        result.success("Device Found");
                     }
                 }
         );
