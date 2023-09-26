@@ -140,7 +140,7 @@ class UsbPort extends AsyncDataSinkSource {
 
   /// Asynchronously writes [data].
   @override
-  Future<void> write(Uint8List data, {int timeout = 1000}) async {
+  Future<String> write(Uint8List data, {int timeout = 1000}) async {
     return await _channel
         .invokeMethod("write", {"data": data, "timeout": timeout});
   }

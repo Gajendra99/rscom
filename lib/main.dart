@@ -49,7 +49,7 @@ class _MyHomePageState extends State<MyHomePage> {
       await port.showToast();
     }
 
-    openPort() async {
+    open() async {
       bool portval = await port.open();
       print("Port OPen status : $port");
     }
@@ -62,11 +62,18 @@ class _MyHomePageState extends State<MyHomePage> {
       await port.setRTS(true);
     }
 
-    write() async {
-      await port.write(Uint8List.fromList([53, 0]));
+    write(String data) async {
+      List<int> intList =
+          data.split(' ').map((String str) => int.parse(str.trim())).toList();
+      String result = await port.write(Uint8List.fromList(intList));
+      print(
+          "==================================================================");
+      print("Return Data = $result");
+      print("=========================================================");
     }
 
     connectPort() async {}
+    TextEditingController txtController = TextEditingController();
 
     return Scaffold(
       appBar: AppBar(
@@ -79,11 +86,32 @@ class _MyHomePageState extends State<MyHomePage> {
           children: <Widget>[
             ElevatedButton(
                 onPressed: () => showToast(), child: Text("Show Toast")),
-            ElevatedButton(onPressed: () => create(), child: Text("Port List")),
-            ElevatedButton(onPressed: () => setDTR(), child: Text("Set DTR")),
-            ElevatedButton(onPressed: () => setRTS(), child: Text("Set RTS")),
-            ElevatedButton(onPressed: () => openPort(), child: Text("Open")),
-            ElevatedButton(onPressed: () => write(), child: Text("Write")),
+            ElevatedButton(onPressed: () => create(), child: Text("Create")),
+            ElevatedButton(onPressed: () => open(), child: Text("Open")),
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Colors.black, // Border color
+                  width: 1.0, // Border width
+                ),
+                borderRadius:
+                    BorderRadius.circular(5.0), // Optional: Add rounded corners
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8.0), // Optional: Add padding
+                child: TextField(
+                  controller: txtController,
+                  decoration: InputDecoration(
+                    border: InputBorder.none, // Hide the default border
+                    hintText: 'Enter text here',
+                  ),
+                ),
+              ),
+            ),
+            ElevatedButton(
+                onPressed: () => write(txtController.text),
+                child: Text("Write")),
           ],
         ),
       ),
